@@ -283,3 +283,166 @@ lambda表达式中捕获的变量必须实际上是最终变量（effectively fi
 - 内部类方法可以访问该类定义所在的作用域中的数据，包括私有的数据。
 - 内部类可以对同一个包中的其他类隐藏起来。
 - 当想要定义一个回调函数且不想编写大量代码时，使用匿名（anonymous）内部类比较便捷。
+
+# 代理
+
+# 异常
+
+## 异常分类
+- Error
+- Exception：RuntimeException
+
+在方法后声明可能会抛出的异常  
+如果方法没有声明所有可能发生的受查异常，编译器就会发出一个错误消息。
+
+## 处理异常
+
+### 抛出异常
+
+1. 找到或创建一个合适的异常类
+1. 创建这个类的一个对象
+1. 将对象抛出
+
+### 捕获异常
+
+捕获异常必须设置try/catch子句
+
+- 如果在try语句块中的任何代码抛出了一个在catch子句中说明的异常类
+    1. 程序将跳过try语句块的其余代码。
+    2. 程序将执行catch子句中的处理器代码。
+- 如果在try语句块中的代码没有抛出任何异常，那么程序将跳过catch子句。  
+- 如果方法中的任何代码抛出了一个在catch子句中没有声明的异常类型，那么这个方法就会立刻退出（希望调用者为这种类型的异常设计了catch子句）。
+
+
+```java
+try {
+    code
+}
+catch (ExceptionType e1) {
+    handle e1
+}
+catch (ExceptionType e2) {
+    handle e2
+}
+catch (ExceptionType1 | ExceptionType2 e3) {
+    handle e3
+}
+```
+多个catch子句捕获多个异常，同时一个catch子句捕获多个不同继承树上的异常。
+
+```java
+try { 
+    code
+}
+catch (SQLException e) {
+    Throwable se = new ServletException("database error");
+    se.initCause(e)
+    throw se;
+}
+```
+通常，应该捕获那些知道如何处理的异常，而将那些不知道怎样处理的异常继续进行传递。可以包装后再抛出，使用`Throwable e = se.getCause()`重新得到原始异常。
+
+### finally子句
+
+不管是否有异常被捕获，finally子句中的代码都被执行。可用于关闭方法中所分配的资源，不需要在正常代码和异常代码中都写一遍。
+
+try语句可以只有finally子句，而没有catch子句。且建议解耦合try/catch和try/finally语句块。
+```java
+InputStream in = ...;
+try {
+    try {
+        code
+    }
+    finally {
+        in.close();
+    }
+}
+catch (IOException e) {
+    handle
+}
+```
+
+try中抛出异常，catch也可能抛出异常，finaly也可能抛出异常。嵌套加嵌套，子子孙孙无穷尽也。
+
+带资源的try子句，自动关闭资源。当close方法抛出异常时会被抑制，try中的异常会被重新抛出。
+```java
+try (Resource res = ...) {
+    code
+}
+```
+
+早抛出，晚捕获。
+
+# 断言
+
+```java
+assert 条件;
+assert 条件:表达式;
+```
+
+# 泛型
+
+Generic programming 编写的代码可以被不同类的对象所使用，类似于数组 `[]`，声明后可以有各种不同数据类型的数组。不需要为每个类设计一个数据结构。
+
+## 类型参数 type parameters
+
+没有泛型类之前，用继承实现泛型。数据结构用一个Object类作为所有操作对象的类。
+```java
+public class ArrayList {
+    private Object[] elementData;
+    ...
+    public Object get(int i) {}
+    public void add(Object o) {}
+}
+```
+导致两个问题：
+1. 方法输出的对象类型为Object，必须进行强制类型转换。
+```java
+ArrayList files = new ArrayList();
+string filename = (String) files.get(0);
+```
+2. 方法输入的对象类型也为Object，可以添加任何类（不同于当前处理的类）而没有错误检查。
+```java
+files.add(new File("..."));
+```
+
+类型参数是所要操作对象的类。
+```java
+ArrayList<String> files =  new ArrayList<String> ();
+ArrayList<String> files =  new ArrayList<> (); //两行代码等价，后者会自行推断变量类型
+```
+
+## 类型变量
+
+类型变量是类型参数的抽象，指代所操作对象的类。用`<T>`尖括号加变量名表示。  
+编写代码时，所有的用到此类名的地方全部用变量名代替。
+```java
+public classs Pair<T> {
+    private T first;
+    public Pair(T first) {}
+    public T getFirst() {}
+}
+```
+
+### 类型变量的限定
+
+有时候需要对类型变量加以约束，规定其必须继承某个类或实现某个接口。  
+在Java的继承中，可以根据需要拥有多个接口超类型，但限定中至多有一个类。如果用一个类作为限定，它必须是限定列表中的第一个。
+
+```java
+public static <T extends Comparable & Serializable> T min(T[] a)
+```
+使用关键字`extends`和`&`约束。
+
+## 泛型方法
+
+泛型方法可以定义在普通类中，也可以定义在泛型类中。
+```java
+class ArrayAlg {
+    public static <T> T getMiddle(T... a) {}
+}
+
+String middle  = ArrayAlg.<String>getMiddle("...");
+// 使用时要指定具体类型，当然编译器会尝试推断，有时可以不写。
+```
+类型变量放在修饰符（这里是public static）的后面，返回类型的前面。
