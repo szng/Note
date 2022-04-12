@@ -446,3 +446,82 @@ String middle  = ArrayAlg.<String>getMiddle("...");
 // 使用时要指定具体类型，当然编译器会尝试推断，有时可以不写。
 ```
 类型变量放在修饰符（这里是public static）的后面，返回类型的前面。
+
+## 泛型代码和虚拟机
+
+虚拟机中没有泛型类型对象，所有对象都属于普通类。
+
+### 类型擦除
+
+泛型类型会自动替换为相应的原始类型（raw type)。
+原始类型的名字就是删去类型参数后的泛型类型名。
+擦除（erased）类型变量，并替换为限定类型（无限定的变量用Object）。  
+原始类型用第一个限定的类型变量来替换，如果没有给定限定就用Object替换。  
+为了提高效率，应该将标签（tagging）接口（即没有方法的接口）放在边界列表的末尾。
+
+### 翻译泛型表达式
+
+擦除方法返回的泛型类型后将返回原始类型，但编译器会强制类型转换为泛型规定的类型。
+
+### 翻译泛型方法
+
+当继承一个泛型类，并且重写包含泛型参数的方法会失败，因为泛型类中泛型参数实质为`object`类。这样一来就有两个名字相同，参数不同的方法。
+
+```java
+class DateInterval extends Pair<LocalDate> {
+    public void setSecond(LocalDate second) {
+
+    }
+}
+
+// after erasure
+class DateInterval extends Pair {
+    public void setSecond(LocalDate second) {
+
+    }
+}
+
+//存在一个从Pair继承的setSecond方法
+public void setSecond(Object second) {}
+
+// bridge method 覆盖继承的setSecond方法
+public void setSecond(Object second) {
+    setSecond((Date) second);
+}
+```
+
+- 虚拟机中没有泛型，只有普通的类和方法。
+- 所有的类型参数都用它们的限定类型替换。
+- 桥方法被合成来保持多态。
+- 为保持类型安全性，必要时插入强制类型转换。 
+
+## 泛型的约束和局限性
+
+由于类型擦除的原因，
+
+- 不能用基本类型实例化类型参数
+- 运行时类型查询只适用于原始类型
+- 不能创建参数化类型的数组  
+`Pair<String>`和`Pair<Integer>`将都被视为Pair，放进同一个数组。
+- Varargs警告  
+可是用`@SafeVarargs`取消警告。
+- 不能实例化类型变量
+- 不能构造泛型数组
+
+## 泛型类型的继承
+
+类型变量没有继承，类型有继承。`Pair<Manager>`和`Pair<Employee>`没有关系，`ArrayList`继承`List`，那么`ArrayList<Manger>`继承`List<Manger>`。
+
+## 通配符
+
+# 集合
+
+基于泛型的集合雷数据结构，其接口和实现分离。
+
+## 迭代器
+
+是一个对象接口，用于依次访问集合中的元素。通过`next`方法访问元素，和文件流类似。应该将java迭代器的位置认为是位于两个元素之间。当调用`next`时，迭代器就越过下一个元素，并返回刚刚越过的那个元素的引用。
+
+## 继承结构
+
+`Collection`接口->`AbstractCollection`抽象类，将基础方法`size`和`iterator`抽象化，将`contain`方法实现了。
